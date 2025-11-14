@@ -8,7 +8,7 @@ const client = Client.forTestnet()
 Given(/^A Hedera account with more than (\d+) hbar$/, async function (expectedBalance: number) {
   const account = accounts[0]
   const MY_ACCOUNT_ID = AccountId.fromString(account.id);
-  const MY_PRIVATE_KEY = PrivateKey.fromStringED25519(account.privateKey);
+  const MY_PRIVATE_KEY = PrivateKey.fromStringDer(account.privateKey);
   client.setOperator(MY_ACCOUNT_ID, MY_PRIVATE_KEY);
 
 //Create the query request
