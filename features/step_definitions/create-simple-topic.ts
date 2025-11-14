@@ -76,7 +76,7 @@ Then(
           unsubscribe?.unsubscribe();
           reject(new Error(`Timeout waiting for message: "${message}"`));
         }
-      }, 10000);
+      }, 15000);
 
       let unsubscribe: any;
 
@@ -155,7 +155,7 @@ When(
       .setTopicMemo(memo)
       .setSubmitKey(this.thresholdKey);
 
-    createTopicTx.freeze();
+    createTopicTx = await createTopicTx.freezeWith(client);
 
     for (const privKey of this.thresholdPrivateKeys) {
       createTopicTx = await createTopicTx.sign(privKey);
