@@ -233,13 +233,25 @@ When(
 );
 
 When(/^The first account submits the transaction$/, async function () {
-  if (this.secondAccountShouldSign) {
+  client.setOperator(this.firstAccountId, this.firstPrivateKey);
+
+  // collecting signnatures from all for multi party
+  if (this.isMultiPartyTransfer) {
+    this.transferTx = await this.transferTx.freezeWith(client);
+    this.transferTx = await this.transferTx.sign(this.firstPrivateKey);
+
+    client.setOperator(this.secondAccountId, this.secondPrivateKey);
+    this.transferTx = await this.transferTx.sign(this.secondPrivateKey);
+
+    client.setOperator(this.firstAccountId, this.firstPrivateKey);
+  } else if (this.secondAccountShouldSign) {
     client.setOperator(this.secondAccountId, this.secondPrivateKey);
     this.transferTx = await this.transferTx.freezeWith(client);
     this.transferTx = await this.transferTx.sign(this.secondPrivateKey);
+
+    client.setOperator(this.firstAccountId, this.firstPrivateKey);
   }
 
-  client.setOperator(this.firstAccountId, this.firstPrivateKey);
   const txResponse = await this.transferTx.execute(client);
   await txResponse.getReceipt(client);
 });
@@ -396,14 +408,15 @@ Given(
 When(
   /^A transaction is created to transfer (\d+) HTT tokens out of the first and second account and (\d+) HTT tokens into the third account and (\d+) HTT tokens into the fourth account$/,
   async function (
-    firstAccountOut: number,
-    secondAccountOut: number,
+    firstAndSecondOut: number,
     thirdAccountIn: number,
     fourthAccountIn: number
   ) {
+    this.isMultiPartyTransfer = true;
+
     this.transferTx = new TransferTransaction()
-      .addTokenTransfer(this.tokenId, this.firstAccountId, -firstAccountOut)
-      .addTokenTransfer(this.tokenId, this.secondAccountId, -secondAccountOut)
+      .addTokenTransfer(this.tokenId, this.firstAccountId, -firstAndSecondOut)
+      .addTokenTransfer(this.tokenId, this.secondAccountId, -firstAndSecondOut)
       .addTokenTransfer(this.tokenId, this.thirdAccountId, thirdAccountIn)
       .addTokenTransfer(this.tokenId, this.fourthAccountId, fourthAccountIn);
   }
