@@ -3,6 +3,7 @@ import {
   AccountBalanceQuery,
   AccountId,
   Client,
+  KeyList,
   PrivateKey,
   RequestType,
   TopicCreateTransaction,
@@ -119,14 +120,51 @@ Then(
   }
 );
 
-Given(/^A second account with more than (\d+) hbars$/, async function () {});
+Given(
+  /^A second account with more than (\d+) hbars$/,
+  async function (expectedBalance: number) {
+    const acc = accounts[1];
+    const account: AccountId = AccountId.fromString(acc.id);
+    this.account2 = account;
+    const privKey: PrivateKey = PrivateKey.fromStringDer(acc.privateKey);
+    this.privKey2 = privKey;
+
+    const query = new AccountBalanceQuery().setAccountId(account);
+    const balance = await query.execute(client);
+    assert.ok(balance.hbars.toBigNumber().toNumber() > expectedBalance);
+  }
+);
 
 Given(
   /^A (\d+) of (\d+) threshold key with the first and second account$/,
-  async function () {}
+  async function (required: number, total: number) {
+    const keyList = new KeyList(
+      [this.privKey.publicKey, this.privKey2.publicKey],
+      required
+    );
+
+    this.thresholdKey = keyList;
+    this.thresholdPrivateKeys = [this.privKey, this.privKey2];
+  }
 );
 
 When(
   /^A topic is created with the memo "([^"]*)" with the threshold key as the submit key$/,
-  async function () {}
+  async function (memo: string) {
+    let createTopicTx = new TopicCreateTransaction()
+      .setTopicMemo(memo)
+      .setSubmitKey(this.thresholdKey);
+
+    createTopicTx.freeze();
+
+    for (const privKey of this.thresholdPrivateKeys) {
+      createTopicTx = await createTopicTx.sign(privKey);
+    }
+
+    const topicId = await createTopicTx
+      .execute(client)
+      .then((response) => response.getReceipt(client))
+      .then((receipt) => receipt.topicId);
+    this.topicId = topicId;
+  }
 );
